@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>ZeZo · Wingo & Number</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --header-teal-top: #1FC6B0;
+            --header-teal-mid: #19BFA7;
+            --header-teal-bot: #0FA79A;
+            --card-navy: #224B7A;
+            --main-bg: #0B1E3D;
+            --win-green: #10B981;
+            --loss-red: #EF4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html {
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--main-bg);
+            color: #FFFFFF;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 10% 20%, rgba(31, 198, 176, 0.08) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(34, 75, 122, 0.25) 0%, transparent 40%);
+        }
+        .app-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100%; position: relative; z-index: 10; }
+        .header-section {
+            background: linear-gradient(180deg, var(--header-teal-top) 0%, var(--header-teal-mid) 50%, var(--header-teal-bot) 100%);
+            width: 100%; padding: 15px 15px 10px;
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+            text-align: center; position: relative; flex-shrink: 0; overflow: hidden;
+            border-bottom: 2px solid rgba(255,255,255,0.2); box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+        }
+        .header-section::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(45deg); animation: shine 6s infinite;
+        }
+        @keyframes shine { 0% { left: -100%; } 100% { left: 100%; } }
+        .main-title {
+            font-size: clamp(1rem, 4.5vw, 1.3rem); font-weight: 800; letter-spacing: -0.5px;
+            text-shadow: 2px 4px 6px rgba(0,0,0,0.3); animation: floating 3s ease-in-out infinite;
+        }
+        @keyframes floating { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        .content-area { flex:1; display:flex; flex-direction:column; align-items:center; padding:12px 10px; overflow-y:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; position:relative; }
+        #homeScreen, #gameView { width:100%; max-width:min(400px,95%); display:block; margin-bottom:10px; }
+        #gameView { display:none; height:100%; position:relative; }
+        .game-iframe {
+            width:100%;
+            height:85vh;
+            min-height:500px;
+            border:none;
+            border-radius:12px;
+            border:2px solid rgba(31,198,176,0.3);
+            background:#000;
+            box-shadow:0 15px 30px rgba(0,0,0,0.5);
+        }
+        .floating-pred-btn {
+            position: fixed; right: max(20px,5%); bottom: max(100px,15vh); width: min(55px,12vw); height: min(55px,12vw);
+            background-color: var(--main-bg); border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; border: 2px solid rgba(255,255,255,0.3);
+            z-index: 100; cursor: pointer; transition: all 0.2s ease; color: white; font-weight: 800;
+            line-height: 1.2; text-align: center; padding: 3px; box-shadow: 0 0 20px rgba(31,198,176,0.4);
+            animation: pulseGlow 2s infinite; font-size: clamp(0.55rem, 2.2vw, 0.7rem);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 15px rgba(31,198,176,0.4); } 50% { box-shadow: 0 0 30px rgba(31,198,176,0.8); } 100% { box-shadow: 0 0 15px rgba(31,198,176,0.4); } }
+        .floating-pred-btn:active { transform: scale(0.95); }
+        .back-from-game { position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); border-radius:8px; padding:8px; cursor:pointer; z-index:101; border:1px solid rgba(255,255,255,0.2); }
+        #modalOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:1000; justify-content:center; align-items:center; padding:16px; }
+        #whatsappModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:3000; justify-content:center; align-items:flex-start; padding:20px; }
+        .whatsapp-modal-content { pointer-events:auto; background:var(--card-navy); border-radius:20px; padding:20px 15px; max-width:min(350px,90%); width:100%; text-align:center; border:2px solid var(--header-teal-top); box-shadow:0 15px 30px rgba(0,0,0,0.6); position:relative; margin:0 auto; backdrop-filter:blur(10px); }
+        .close-whatsapp { position:absolute; top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#fff; background:rgba(255,255,255,0.2); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; line-height:1; transition:all 0.2s; }
+        .close-whatsapp:hover { background:rgba(255,255,255,0.4); }
+        .modal-content { width:100%; max-width:min(370px,95%); max-height:90vh; overflow-y:auto; border-radius:25px; }
+        #passwordCard, #apiView { width:100%; display:none; }
+        .game-card, .password-card, .api-container {
+            background:rgba(34,75,122,0.95); backdrop-filter:blur(15px);
+            border-radius:20px;
+            padding:20px 15px; width:100%; text-align:center;
+            border:1.5px solid rgba(31,198,176,0.35); margin:0 auto;
+        }
+        .official-name-tag { color:var(--header-teal-top); font-size:0.8rem; font-weight:600; margin-bottom:5px; display:block; text-transform:uppercase; text-shadow:0 2px 4px rgba(0,0,0,0.3); }
+        .game-subtitle { font-size:clamp(1.1rem, 4.5vw, 1.3rem); font-weight:700; color:#FFFFFF; margin-bottom:12px; background:linear-gradient(to bottom, #fff, var(--header-teal-top)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        .primary-btn {
+            background:linear-gradient(135deg, var(--header-teal-top), var(--header-teal-bot));
+            color:var(--main-bg); font-weight:800; width:100%;
+            padding:14px;
+            border-radius:12px;
+            font-size:clamp(0.9rem,3.5vw,1rem); text-transform:uppercase; letter-spacing:1px;
+            transition:all 0.2s ease; border:none; cursor:pointer; position:relative; top:0;
+            box-shadow:0 5px 0 #097a70, 0 10px 20px rgba(0,0,0,0.3); margin-bottom:10px;
+        }
+        .primary-btn:active { transform:translateY(4px); box-shadow:0 1px 0 #097a70, 0 5px 10px rgba(0,0,0,0.3); }
+        /* Download button – smaller & gradient */
+        .download-btn {
+            background: linear-gradient(135deg, #FF8C00, #FF4500);
+            color: white;
+            font-weight: 700;
+            width: auto;
+            min-width: 160px;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255,69,0,0.4);
+            margin: 10px auto 15px;
+            display: inline-block;
+            text-decoration: none;
+            text-align: center;
+        }
+        .download-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 15px rgba(255,69,0,0.6);
+        }
+        .download-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(255,69,0,0.4);
+        }
+        .download-btn.disabled {
+            background: #aaa;
+            box-shadow: none;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+        .pass-input { background:rgba(0,0,0,0.3); border:2px solid var(--header-teal-top); border-radius:12px; padding:15px; width:100%; color:white; text-align:center; font-size:1.2rem; letter-spacing:4px; margin-bottom:20px; outline:none; }
+        .requirement-container { margin-top:25px; padding:15px; background:rgba(0,0,0,0.25); border-radius:15px; border:1px dashed rgba(31,198,176,0.4); text-align:right; direction:rtl; }
+        .req-text { font-size:0.85rem; line-height:1.8; color:#e0e0e0; }
+        .req-highlight { color:var(--header-teal-top); font-weight:800; display:block; text-align:center; margin-bottom:10px; font-size:0.95rem; }
+        .youtube-section {
+            width:100%; max-width:min(400px,100%); margin:20px auto 30px;
+            background: rgba(34,75,122,0.6); backdrop-filter:blur(10px);
+            border-radius:20px; padding:25px 20px;
+            border: none;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .thumbnail-item {
+            display:flex; flex-direction:column; 
+            background: rgba(0,0,0,0.3);
+            border-radius:18px; padding:0;
+            border: none;
+            transition:transform 0.15s ease; margin-bottom:20px; cursor:pointer;
+            overflow: hidden;
+        }
+        .thumbnail-item:active { transform:scale(0.99); background:rgba(0,0,0,0.4); }
+        .video-title {
+            font-size:0.95rem; font-weight:600; color:#FFFFFF; 
+            margin:12px 15px 8px;
+            display:flex; align-items:center; gap:6px;
+        }
+        .video-title::before { content:"📺"; font-size:0.95rem; filter:drop-shadow(0 2px 2px black); }
+        .thumbnail-placeholder {
+            width:100%; aspect-ratio:16/9;
+            background: linear-gradient(145deg, #2a4b76, #102b44);
+            display:flex; align-items:center; justify-content:center;
+            background-size:cover; background-position:center;
+            border: none;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        .youtube-play-icon {
+            width:min(45px,11vw); height:min(45px,11vw);
+            background-color:#ff0000; border-radius:50%; 
+            display:flex; align-items:center; justify-content:center;
+            border:none; box-shadow:0 4px 10px rgba(0,0,0,0.3);
+        }
+        .youtube-play-icon::after {
+            content:""; width:0; height:0;
+            border-left:clamp(10px,3.5vw,14px) solid white;
+            border-top:clamp(7px,2.2vw,9px) solid transparent;
+            border-bottom:clamp(7px,2.2vw,9px) solid transparent;
+            margin-left:3px;
+        }
+        .info-box {
+            background: rgba(0,0,0,0.3);
+            border-radius:18px; padding:16px 15px;
+            margin-top:15px;
+            border: none;
+            backdrop-filter:blur(5px);
+        }
+        .info-title { font-size:0.95rem; font-weight:700; color:#FFD700; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+        .info-title span { font-size:1.2rem; }
+        .info-message { font-size:0.8rem; color:#e0e0e0; line-height:1.5; margin-bottom:5px; }
+        .info-highlight { color:var(--header-teal-top); font-weight:600; }
+
+        .game-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+        .game-tab {
+            flex: 1; padding: 8px; border-radius: 20px;
+            background: rgba(0,0,0,0.3); border: 2px solid transparent;
+            font-weight: 700; cursor: pointer; transition: 0.2s; color: #fff; font-size:0.9rem;
+        }
+        .game-tab.active { border-color: var(--header-teal-top); background: rgba(31,198,176,0.2); }
+        .timer-circle {
+            width:min(80px,22vw); height:min(80px,22vw); border-radius:50%;
+            border:4px solid rgba(31,198,176,0.2); border-top-color:var(--header-teal-top);
+            display:flex; align-items:center; justify-content:center; margin:12px auto;
+            font-size:clamp(1.1rem,4.5vw,1.3rem); font-weight:800; background:rgba(0,0,0,0.2);
+            animation:spin 2s linear infinite;
+        }
+        @keyframes spin { 100% { border-top-color: #0FA79A; } }
+        .result-display {
+            font-size:clamp(1.4rem,5.5vw,1.8rem); font-weight:800; letter-spacing:2px;
+            background:linear-gradient(to right, #fff, var(--header-teal-top));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:8px 0;
+        }
+        .number-set-container { display: flex; justify-content: center; gap: 8px; margin: 12px 0; }
+        .number-box {
+            width: 40px; height: 40px; background: rgba(255,255,255,0.1);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; font-weight: 800; border: 2px solid var(--header-teal-top);
+        }
+        .small-note { font-size: 0.8rem; color: #FFD700; margin-top: 8px; font-weight: 500; text-align: center; direction: rtl; }
+        table { width:100%; margin-top:12px; font-size:clamp(0.6rem,2.3vw,0.7rem); border-collapse: collapse; }
+        th { color:var(--header-teal-top); border-bottom:1px solid rgba(31,198,176,0.2); padding:5px; text-align:center; }
+        td { padding:5px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; }
+        .corner-back-btn {
+            position:absolute; top:15px; left:15px; background:rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:8px;
+            cursor:pointer; z-index:50; display:flex; align-items:center; justify-content:center;
+            transition:all 0.2s ease;
+        }
+        .corner-back-btn:active { transform:scale(0.9); background:rgba(255,255,255,0.2); }
+        .corner-back-btn svg { width:16px; height:16px; fill:#FFFFFF; }
+        .back-link { margin-top:12px; color:var(--header-teal-top); font-size:0.65rem; font-weight:600; text-transform:uppercase; cursor:pointer; opacity:0.7; padding-bottom:8px; text-align:center; }
+        .social-container {
+            background: rgba(34,75,122,0.95); backdrop-filter: blur(20px);
+            border-top-left-radius: 25px; border-top-right-radius: 25px;
+            padding: 6px 8px 6px;
+            display: flex; justify-content: space-around; align-items: center;
+            border-top: 1.5px solid rgba(31,198,176,0.4);
+            width: 100%; flex-shrink: 0;
+        }
+        .social-item { display:flex; flex-direction:column; align-items:center; text-decoration:none; width:18%; }
+        .icon-box {
+            width:min(32px,7vw); height:min(32px,7vw);
+            background:linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            border-radius:8px; display:flex; align-items:center; justify-content:center;
+            margin-bottom:3px; border:1px solid rgba(255,255,255,0.15);
+        }
+        .icon-box svg { fill:var(--header-teal-top); width:min(16px,3.5vw); height:min(16px,3.5vw); }
+        .play-game-btn .icon-box {
+            width:min(48px,10vw); height:min(48px,10vw);
+            background:linear-gradient(135deg, var(--header-teal-top), var(--header-teal-bot));
+            border:2px solid rgba(255,255,255,0.4);
+        }
+        .play-game-btn .icon-box svg { fill:var(--main-bg); width:min(26px,5.5vw); height:min(26px,5.5vw); }
+        .social-label { font-size:clamp(0.4rem,1.5vw,0.45rem); font-weight:800; color:rgba(255,255,255,0.8); text-align:center; text-transform:uppercase; }
+        .glow-dot { position:absolute; background:var(--header-teal-top); border-radius:50%; opacity:0.5; pointer-events:none; z-index:1; animation:pulse-dot 4s infinite ease-in-out; }
+        @keyframes pulse-dot { 0%,100% { opacity:0.1; transform:scale(1); } 50% { opacity:0.8; transform:scale(1.6); } }
+        #errorModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; }
+        .win-badge { color:var(--win-green); font-weight:700; }
+        .loss-badge { color:var(--loss-red); font-weight:700; }
+        @media (max-width:380px) { .content-area { padding:10px 8px; } .game-card, .password-card, .api-container { padding:15px 12px; } .primary-btn { padding:12px; } }
+    </style>
+</head>
+<body>
+    <!-- WhatsApp Join Modal -->
+    <div id="whatsappModal">
+        <div class="whatsapp-modal-content">
+            <div class="close-whatsapp" onclick="dismissWhatsAppModal()">✕</div>
+            <h2 class="text-2xl font-bold text-teal-400 mb-4">📢 JOIN OUR WHATSAPP CHANNEL</h2>
+            <p class="text-sm opacity-90 mb-6">Get daily updates, exclusive tips, and special offers. Join now to stay connected!</p>
+            <a id="whatsappChannelLink" href="#" target="_blank" class="primary-btn mb-4" style="display:inline-block; width:auto; padding:12px 25px; background:#25D366; color:white; box-shadow:none;">📱 JOIN NOW</a>
+            <button onclick="dismissWhatsAppModal()" class="primary-btn" style="background:var(--header-teal-top); box-shadow:none;">⏰ REMIND LATER</button>
+            <p class="text-xs opacity-60 mt-4">You can close this window and join later.</p>
+        </div>
+    </div>
+
+    <div class="app-wrapper" id="appWrapper">
+        <header class="header-section">
+            <h1 class="main-title">ZeZo Wingo Pro Hack</h1>
+        </header>
+
+        <div class="content-area" id="scrollContainer">
+            <!-- HOME SCREEN -->
+            <div id="homeScreen">
+                <div class="game-card">
+                    <span class="official-name-tag">92 Pak Official Hack</span>
+                    <div class="flex justify-center mb-3"><div class="w-12 h-1 bg-teal-400 rounded-full opacity-40"></div></div>
+                    <h2 class="game-subtitle">92 Pak Hack</h2>
+
+                    <!-- Download button – smaller & gradient -->
+                    <a id="downloadBtn" href="#" class="download-btn disabled" target="_blank">Download Now</a>
+                    <p id="downloadMessage" class="text-xs text-red-300/80 mb-3" style="display: none;">Download link not available</p>
+
+                    <button onclick="startGame('wingo')" class="primary-btn mb-2">START WINGO PREDICTION</button>
+                    <button onclick="startGame('number')" class="primary-btn" style="background:linear-gradient(135deg, #FBBF24, #F59E0B); box-shadow:0 5px 0 #B45309;">START NUMBER PREDICTION</button>
+                    <p class="mt-3 text-[10px] text-teal-400/60 uppercase tracking-widest font-bold" id="footerSmallText">Wingo v3.2 · Number v2.0</p>
+                </div>
+
+                <!-- YouTube + Giveaway -->
+                <div class="youtube-section" id="youtubeSection">
+                    <div class="youtube-heading">🎬 LATEST VIDEO</div>
+                    <div class="thumbnail-item" id="youtubeThumbnail">
+                        <span class="video-title" id="videoTitle">Loading...</span>
+                        <div class="thumbnail-placeholder" id="thumbnailContainer"><div class="youtube-play-icon"></div></div>
+                    </div>
+                    <div class="info-box" id="giveawayBox">
+                        <div class="info-title"><span>🎁</span> <span id="giveawayTitle">DAILY GIVEAWAY</span></div>
+                        <div class="info-message" id="giveawayMessage">Loading...</div>
+                        <div class="info-message" style="margin-top:10px; font-size:0.75rem; color:#aad8d1;" id="giveawayFooter">⏰ روزانہ رات 8 بجے اپ ڈیٹ ہوتا ہے۔</div>
+                    </div>
+                    <p class="text-center text-[0.6rem] text-teal-300/70 mt-4 tracking-wider">👇 مزید معلومات کے لیے سکرول کریں</p>
+                </div>
+            </div>
+
+            <!-- GAME VIEW -->
+            <div id="gameView">
+                <div class="back-from-game" onclick="backToHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></div>
+                <iframe id="gameIframe" class="game-iframe" src="https://www.example.com" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+                <div class="floating-pred-btn" onclick="openPredictionModal()">HACK</div>
+            </div>
+        </div>
+
+        <!-- Modal overlay -->
+        <div id="modalOverlay"><div class="modal-content">
+            <!-- Password Card -->
+            <div id="passwordCard" class="password-card">
+                <span class="official-name-tag">Security Required</span>
+                <h2 class="game-subtitle" style="font-size:1.2rem; margin-bottom:20px;">Enter Password</h2>
+                <input type="password" id="passwordInput" class="pass-input" placeholder="Type Here...">
+                <button onclick="checkPassword()" class="primary-btn">Unlock Now</button>
+                <div class="requirement-container">
+                    <span class="req-highlight">🔐 *ہیک کا پاس ورڈ حاصل کرنے کا طریقہ* 🔐</span>
+                    <div class="req-text" id="requirementText">
+                        👉 ہماری لنک سے نیا اکاؤنٹ بنائیں<br>👉 اکاؤنٹ میں ڈیپازٹ کریں<br>👉 ڈیپازٹ کا اسکرین شاٹ ہمارے ساتھ شیئر کریں<br>
+                        <span style="color:var(--header-teal-top); font-weight:600;">✅ *اس کے بعد آپ کو ہیک کا پاس ورڈ دے دیا جائے گا*</span><br>
+                        <span style="color:#FFD700; font-weight:600; display:block; margin-top:8px;">⚠️ *اہم شرط* :</span>
+                        ✔️ *صرف NEW ACCOUNT قابلِ قبول ہے*<br>✔️ کم از کم ڈیپازٹ 300 یا اس سے زیادہ ہونا لازمی ہے<br>
+                        <div style="text-align:center; margin-top:10px; font-size:0.75rem; opacity:0.9;">🚀 *Limited Offer | Serious Users Only* 🚀</div>
+                    </div>
+                </div>
+                <div class="back-link" onclick="closeModal()">Close</div>
+            </div>
+            <!-- Prediction View -->
+            <div id="apiView" class="api-container">
+                <div class="corner-back-btn" onclick="closeModal()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></div>
+                
+                <div class="game-tabs">
+                    <div class="game-tab active" data-game="30S" onclick="switchGame('30S')">30 Seconds</div>
+                    <div class="game-tab" data-game="1M" onclick="switchGame('1M')">1 Minute</div>
+                </div>
+
+                <div class="text-[0.7rem] text-teal-400 font-bold uppercase tracking-widest">Live Period</div>
+                <div id="period" class="text-xl font-bold">--------</div>
+                <div class="timer-circle" id="seconds">--</div>
+                
+                <!-- Dynamic prediction area -->
+                <div id="wingoPredictionArea" style="display: none;" class="py-4 bg-black/20 rounded-2xl mb-2">
+                    <div class="text-[0.6rem] uppercase font-bold opacity-60">Wingo Signal</div>
+                    <div id="wingoPrediction" class="result-display">WAITING...</div>
+                </div>
+                
+                <div id="numberPredictionArea" style="display: none;" class="py-4 bg-black/20 rounded-2xl mb-2">
+                    <div class="text-[0.6rem] uppercase font-bold opacity-60">Number Set Prediction</div>
+                    <div id="numberSetContainer" class="number-set-container"></div>
+                    <div class="small-note">ان پانچ نمبروں میں سے ایک بھی نمبر آیا تو آپ جیت جاؤ گے</div>
+                </div>
+
+                <!-- History table -->
+                <div class="overflow-hidden rounded-xl bg-black/10">
+                    <table>
+                        <thead id="tableHeader"></thead>
+                        <tbody id="history"></tbody>
+                    </table>
+                </div>
+                <div class="back-link" onclick="closeModal()">Close</div>
+            </div>
+        </div></div>
+
+        <!-- Social Bar -->
+        <div class="social-container" id="socialBar">
+            <a href="#" class="social-item" id="contactLink" target="_blank" onclick="handleInteraction()"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.53.909 3.039 1.389 4.625 1.39 5.25.001 9.522-4.272 9.523-9.523.001-2.546-.994-4.937-2.798-6.742-1.804-1.803-4.195-2.798-6.741-2.799-5.245 0-9.519 4.274-9.521 9.525-.001 1.696.449 3.353 1.303 4.811l-1.01 3.693 3.819-.982z"/></svg></div><span class="social-label">Contact</span></a>
+            <a href="#" class="social-item" id="waChannelLink" target="_blank" onclick="handleInteraction()"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg></div><span class="social-label">WA Channel</span></a>
+            <a href="#" class="social-item play-game-btn" id="registerLink" target="_blank" onclick="handleInteraction()"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg></div><span class="social-label">Register</span></a>
+            <a href="#" class="social-item" id="ytChannelLink" target="_blank" onclick="handleInteraction()"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div><span class="social-label">YT Channel</span></a>
+            <a href="#" class="social-item" id="fbPageLink" target="_blank" onclick="handleInteraction()"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div><span class="social-label">FB Page</span></a>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal"><div style="background:var(--card-navy); padding:30px; border-radius:20px; border:1px solid #ff4444; text-align:center; max-width:80%;"><h3 style="color:#ff4444; font-weight:800; margin-bottom:15px;">WRONG PASSWORD</h3><p style="font-size:0.9rem; opacity:0.8; margin-bottom:20px;">Access denied. Please check your password and try again.</p><button onclick="document.getElementById('errorModal').style.display='none'" class="primary-btn" style="padding:10px 30px; background:#ff4444; box-shadow:none;">OK</button></div></div>
+    <audio id="clickSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+
+    <script>
+        const FIREBASE_URL = "https://zezo-wingo-pro-penal-hack-default-rtdb.firebaseio.com";
+
+        // DOM elements
+        const homeScreen = document.getElementById('homeScreen');
+        const gameView = document.getElementById('gameView');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const passwordCard = document.getElementById('passwordCard');
+        const apiView = document.getElementById('apiView');
+        const periodEl = document.getElementById("period");
+        const secondsEl = document.getElementById("seconds");
+        const wingoPredictionArea = document.getElementById('wingoPredictionArea');
+        const numberPredictionArea = document.getElementById('numberPredictionArea');
+        const wingoPrediction = document.getElementById('wingoPrediction');
+        const numberSetContainer = document.getElementById('numberSetContainer');
+        const historyBody = document.getElementById("history");
+        const tableHeader = document.getElementById("tableHeader");
+        const scrollContainer = document.getElementById("scrollContainer");
+        const passwordInput = document.getElementById('passwordInput');
+        const errorModal = document.getElementById('errorModal');
+        const videoTitle = document.getElementById('videoTitle');
+        const thumbnailContainer = document.getElementById('thumbnailContainer');
+        const youtubeThumbnail = document.getElementById('youtubeThumbnail');
+        const giveawayTitle = document.getElementById('giveawayTitle');
+        const giveawayMessage = document.getElementById('giveawayMessage');
+        const giveawayFooter = document.getElementById('giveawayFooter');
+        const gameIframe = document.getElementById('gameIframe');
+        const whatsappModal = document.getElementById('whatsappModal');
+        const whatsappChannelLink = document.getElementById('whatsappChannelLink');
+        const contactLink = document.getElementById('contactLink');
+        const waChannelLink = document.getElementById('waChannelLink');
+        const registerLink = document.getElementById('registerLink');
+        const ytChannelLink = document.getElementById('ytChannelLink');
+        const fbPageLink = document.getElementById('fbPageLink');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadMessage = document.getElementById('downloadMessage');
+        const footerSmallText = document.getElementById('footerSmallText');
+        const officialNameTag = document.querySelector('.official-name-tag');
+        const mainTitle = document.querySelector('.main-title');
+        const gameSubtitle = document.querySelector('.game-subtitle');
+        const wingoBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('WINGO'));
+        const numberBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('NUMBER'));
+
+        let APP_PASSWORD = "7474";
+        let GAME_LINK = "https://www.example.com";
+        let WHATSAPP_CHANNEL_URL = "https://whatsapp.com/channel/example";
+        let TIMER_OFFSET = -5;
+        let isUnlocked = false;
+        let timerInterval;
+        let previousPeriod = null;
+        let currentGame = "30S";
+        let currentGameType = 'wingo';
+        let numberSetCache = {};
+
+        // ---------- Prediction Generator ----------
+        const SMALL = [0,1,2,3,4];
+        const BIG   = [5,6,7,8,9];
+        function shuffle(arr) { for (let i = arr.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+        function generatePrediction(prevDigits, patternIndex) {
+            const smallCount = patternIndex % 2 === 0 ? 2 : 3;
+            const bigCount = 5 - smallCount;
+            for (let attempt = 0; attempt < 500; attempt++) {
+                const smallPool = shuffle([...SMALL]);
+                const selectedSmall = smallPool.slice(0, smallCount);
+                const bigPool = shuffle([...BIG]);
+                const selectedBig = bigPool.slice(0, bigCount);
+                const candidate = shuffle([...selectedSmall, ...selectedBig]);
+                if (prevDigits) {
+                    const overlap = candidate.filter(d => prevDigits.includes(d)).length;
+                    if (overlap > 2) continue;
+                }
+                return candidate.join('');
+            }
+            for (let attempt = 0; attempt < 50; attempt++) {
+                const smallPool = shuffle([...SMALL]);
+                const selectedSmall = smallPool.slice(0, smallCount);
+                const bigPool = shuffle([...BIG]);
+                const selectedBig = bigPool.slice(0, bigCount);
+                const candidate = shuffle([...selectedSmall, ...selectedBig]);
+                if (prevDigits) {
+                    const overlap = candidate.filter(d => prevDigits.includes(d)).length;
+                    if (overlap <= 2) return candidate.join('');
+                } else return candidate.join('');
+            }
+            return "01234";
+        }
+        function getPeriodNumber(p) { return parseInt(String(p).replace(/\D/g,'')) || 0; }
+        function getWingoPrediction(historyList) {
+            if (!historyList || !historyList.length) return "BIG";
+            let latest = historyList[0];
+            let actualNum = parseInt(latest.number);
+            if (isNaN(actualNum)) return "BIG";
+            let lastSize = (actualNum>=0 && actualNum<=4) ? "SMALL" : "BIG";
+            return lastSize === "SMALL" ? "BIG" : "SMALL";
+        }
+
+        const API_ENDPOINTS = {
+            "30S": { time: "https://draw.ar-lottery01.com/WinGo/WinGo_30S.json", history: "https://draw.ar-lottery01.com/WinGo/WinGo_30S/GetHistoryIssuePage.json" },
+            "1M": { time: "https://draw.ar-lottery01.com/WinGo/WinGo_1M.json", history: "https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json" }
+        };
+
+        const VISITOR_KEY = 'zezo_visitor_id';
+        let visitorId = localStorage.getItem(VISITOR_KEY);
+        const isNew = !visitorId;
+        if (isNew) {
+            visitorId = 'v_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
+            localStorage.setItem(VISITOR_KEY, visitorId);
+        }
+        function updatePresence() { fetch(`${FIREBASE_URL}/presence/${visitorId}.json`, { method:'PUT', body:JSON.stringify({ lastSeen:Date.now() }) }).catch(()=>{}); }
+        updatePresence(); setInterval(updatePresence, 30000);
+        fetch(`${FIREBASE_URL}/analytics/visits.json`, { method:'POST', body:JSON.stringify({ visitorId, timestamp:Date.now(), isNew, userAgent:navigator.userAgent }) }).catch(()=>{});
+
+        async function fetchLiveData() {
+            if (!isUnlocked) return;
+            try {
+                const [timeRes, historyRes] = await Promise.all([ fetch(API_ENDPOINTS[currentGame].time), fetch(API_ENDPOINTS[currentGame].history) ]);
+                const timeData = await timeRes.json();
+                const historyData = await historyRes.json();
+                const currentPeriod = timeData?.current?.issueNumber || "--";
+                const endTime = timeData?.current?.endTime;
+                const now = Date.now();
+                let secondsLeft = 0;
+                if (endTime) {
+                    secondsLeft = Math.floor((endTime-now)/1000) + TIMER_OFFSET;
+                    const maxSeconds = currentGame === "30S" ? 30 : 60;
+                    if (secondsLeft > maxSeconds) secondsLeft = maxSeconds;
+                    if (secondsLeft < 0) secondsLeft = 0;
+                }
+                periodEl.innerText = currentPeriod;
+                startTimer(secondsLeft);
+
+                const historyList = historyData?.data?.list || [];
+                let allPeriods = historyList.map(i=>i.issueNumber);
+                if (currentPeriod !== "--") allPeriods.push(currentPeriod);
+                allPeriods = [...new Set(allPeriods)];
+                let periodObjects = allPeriods.map(p=>({ period:p, num:getPeriodNumber(p) })).sort((a,b)=>a.num-b.num);
+                let prevDigits = null, patternIndex = 0;
+                for (let po of periodObjects) {
+                    if (!numberSetCache[po.period]) {
+                        const predStr = generatePrediction(prevDigits, patternIndex);
+                        numberSetCache[po.period] = predStr.split('').map(Number);
+                    }
+                    prevDigits = numberSetCache[po.period];
+                    patternIndex++;
+                }
+
+                if (currentGameType === 'wingo') {
+                    wingoPredictionArea.style.display = 'block';
+                    numberPredictionArea.style.display = 'none';
+                    wingoPrediction.innerText = getWingoPrediction(historyList);
+                } else {
+                    wingoPredictionArea.style.display = 'none';
+                    numberPredictionArea.style.display = 'block';
+                    const currentSet = numberSetCache[currentPeriod] || [];
+                    numberSetContainer.innerHTML = '';
+                    currentSet.forEach(n => {
+                        const box = document.createElement('div'); box.className = 'number-box'; box.innerText = n;
+                        numberSetContainer.appendChild(box);
+                    });
+                }
+
+                tableHeader.innerHTML = currentGameType==='wingo' ? '<tr><th>Period</th><th>Actual</th><th>Result</th></tr>' : '<tr><th>Period</th><th>Prediction</th><th>Actual</th><th>Result</th></tr>';
+                let lastItems = historyList.slice(0,10);
+                historyBody.innerHTML = "";
+                lastItems.forEach(item => {
+                    const issue = item.issueNumber;
+                    const actualNum = parseInt(item.number);
+                    let actualDisplay, winLoss, predictionDisplay;
+                    if (currentGameType === 'wingo') {
+                        let idx = historyList.indexOf(item);
+                        let prevActual = null;
+                        if (idx < historyList.length-1) {
+                            let prevItem = historyList[idx+1];
+                            let prevNum = parseInt(prevItem.number);
+                            prevActual = (prevNum>=0 && prevNum<=4) ? "SMALL" : "BIG";
+                        }
+                        let predForHistory = prevActual ? (prevActual==="SMALL"?"BIG":"SMALL") : "BIG";
+                        const actual = (actualNum>=0 && actualNum<=4) ? "SMALL" : "BIG";
+                        actualDisplay = actual;
+                        winLoss = predForHistory===actual ? 'WIN' : 'LOSS';
+                    } else {
+                        const set = numberSetCache[issue] || [];
+                        predictionDisplay = set.join(', ');
+                        actualDisplay = actualNum.toString();
+                        winLoss = set.includes(actualNum) ? 'WIN' : 'LOSS';
+                    }
+                    const resultClass = winLoss==='WIN' ? 'win-badge' : 'loss-badge';
+                    if (currentGameType==='wingo') {
+                        historyBody.innerHTML += `<tr><td>${issue}</td><td class="font-bold">${actualDisplay}</td><td class="${resultClass}">${winLoss}</td></tr>`;
+                    } else {
+                        historyBody.innerHTML += `<tr><td>${issue}</td><td class="font-bold">${predictionDisplay}</td><td class="font-bold">${actualDisplay}</td><td class="${resultClass}">${winLoss}</td></tr>`;
+                    }
+                });
+                previousPeriod = currentPeriod;
+            } catch(e) { console.error(e); if (currentGameType==='wingo') wingoPrediction.innerText = "ERROR"; }
+        }
+
+        function startTimer(s) { clearInterval(timerInterval); secondsEl.innerText = s; timerInterval = setInterval(()=>{ s--; if(s<0) s=0; secondsEl.innerText = s; if(s<=0) clearInterval(timerInterval); },1000); }
+        function switchGame(g) { if (g===currentGame) return; currentGame=g; document.querySelectorAll('.game-tab').forEach(t=>{ t.dataset.game===g ? t.classList.add('active') : t.classList.remove('active'); }); previousPeriod=null; fetchLiveData(); }
+
+        async function loadConfig() {
+            try {
+                const resp = await fetch(`${FIREBASE_URL}/config.json`);
+                const config = await resp.json() || {};
+
+                // Texts
+                if (config.mainTitle) { mainTitle.innerText = config.mainTitle; document.title = config.mainTitle; }
+                if (config.officialNameTag) officialNameTag.innerText = config.officialNameTag;
+                if (config.gameSubtitle) gameSubtitle.innerText = config.gameSubtitle;
+                if (config.wingoButtonText && wingoBtn) wingoBtn.innerText = config.wingoButtonText;
+                if (config.numberButtonText && numberBtn) numberBtn.innerText = config.numberButtonText;
+                if (config.footerSmallText) footerSmallText.innerText = config.footerSmallText;
+
+                // Links
+                if (config.downloadAppLink) {
+                    downloadBtn.href = config.downloadAppLink;
+                    downloadBtn.classList.remove('disabled');
+                    downloadMessage.style.display = 'none';
+                } else { downloadBtn.classList.add('disabled'); downloadMessage.style.display = 'block'; }
+
+                if (config.whatsappNumber) contactLink.href = `https://wa.me/${config.whatsappNumber}`;
+                if (config.whatsappContactLink) waChannelLink.href = config.whatsappContactLink;
+                if (config.whatsappChannelLink) { WHATSAPP_CHANNEL_URL = config.whatsappChannelLink; whatsappChannelLink.href = config.whatsappChannelLink; }
+                if (config.registerGameLink) { GAME_LINK = config.registerGameLink; registerLink.href = config.registerGameLink; }
+                if (config.youtubeChannelLink) ytChannelLink.href = config.youtubeChannelLink;
+                if (config.facebookPageLink) fbPageLink.href = config.facebookPageLink;
+
+                // Giveaway & YouTube
+                if (config.dailyGiveawayTitle) giveawayTitle.innerText = config.dailyGiveawayTitle;
+                if (config.dailyGiveawayMessage) giveawayMessage.innerHTML = config.dailyGiveawayMessage.replace(/\n/g,'<br>');
+                if (config.dailyGiveawayFooter) giveawayFooter.innerText = config.dailyGiveawayFooter;
+                if (config.youtubeVideoTitle) videoTitle.innerText = config.youtubeVideoTitle;
+                if (config.youtubeVideoUrl) youtubeThumbnail.onclick = () => window.open(config.youtubeVideoUrl, '_blank');
+                if (config.youtubeThumbnailUrl) thumbnailContainer.style.backgroundImage = `url('${config.youtubeThumbnailUrl}')`;
+
+                // Security & misc
+                if (config.appPassword) APP_PASSWORD = config.appPassword;
+                if (typeof config.timerOffset === 'number') TIMER_OFFSET = config.timerOffset;
+            } catch(e) { console.warn("Config error", e); }
+        }
+
+        function shouldShowWhatsAppModal() { const j = localStorage.getItem('whatsapp_join_date'), d = localStorage.getItem('whatsapp_dismissed_date'), t = new Date().toISOString().split('T')[0]; return !(j===t || d===t); }
+        function dismissWhatsAppModal() { localStorage.setItem('whatsapp_dismissed_date', new Date().toISOString().split('T')[0]); whatsappModal.style.display = 'none'; }
+
+        function startGame(type) { handleInteraction(); currentGameType = type; homeScreen.style.display='none'; gameView.style.display='block'; gameIframe.src = GAME_LINK; if (isUnlocked) { if (window.liveInterval) clearInterval(window.liveInterval); window.liveInterval = setInterval(fetchLiveData,2000); fetchLiveData(); } scrollContainer.scrollTop = 0; }
+        function backToHome() { handleInteraction(); gameView.style.display='none'; homeScreen.style.display='block'; closeModal(); if (window.liveInterval) { clearInterval(window.liveInterval); window.liveInterval=null; } }
+        function openPredictionModal() { handleInteraction(); if (isUnlocked) { passwordCard.style.display='none'; apiView.style.display='block'; modalOverlay.style.display='flex'; fetchLiveData(); if (window.liveInterval) clearInterval(window.liveInterval); window.liveInterval = setInterval(fetchLiveData,2000); } else { passwordCard.style.display='block'; apiView.style.display='none'; modalOverlay.style.display='flex'; passwordInput.value=''; } }
+        function closeModal() { modalOverlay.style.display='none'; }
+        function checkPassword() { if (passwordInput.value === APP_PASSWORD) { handleInteraction(); isUnlocked = true; passwordCard.style.display='none'; apiView.style.display='block'; fetchLiveData(); if (window.liveInterval) clearInterval(window.liveInterval); window.liveInterval = setInterval(fetchLiveData,2000); } else { handleInteraction(); errorModal.style.display='flex'; passwordInput.value=''; } }
+        function handleInteraction() { document.getElementById('clickSound').play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(40); }
+
+        window.onload = async () => {
+            await loadConfig();
+            whatsappModal.style.display = shouldShowWhatsAppModal() ? 'flex' : 'none';
+            homeScreen.style.display = 'block'; gameView.style.display = 'none'; modalOverlay.style.display = 'none';
+        };
+    </script>
+</body>
+</html>
